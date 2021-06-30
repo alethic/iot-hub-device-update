@@ -26,9 +26,9 @@ ADUShellTaskResult Reboot(const ADUShell_LaunchArguments& /*launchArgs*/)
 {
     Log_Info("Launching child process to reboot the device.");
     ADUShellTaskResult taskResult;
-    std::vector<std::string> args{ "--reboot", "--no-wall" };
+    std::vector<std::string> args{ "AducIotAgent" };
     std::string output;
-    taskResult.SetExitStatus(ADUC_LaunchChildProcess("/sbin/reboot", args, output));
+    taskResult.SetExitStatus(ADUC_LaunchChildProcess("/usr/bin/killall", args, output));
     if (!output.empty())
     {
         Log_Info(output.c_str());

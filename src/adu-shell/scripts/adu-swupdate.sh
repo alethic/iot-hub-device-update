@@ -69,18 +69,13 @@ fi
 # Make sure the log directory is created.
 mkdir -p "$log_dir"
 
-# SWUpdate doesn't support everything necessary for the dual-copy or A/B update strategy.
-# Here we figure out the current OS partition and then set some environment variables
-# that we use to tell swupdate which partition to target.
-rootfs_dev=$(mount | grep "on / type" | cut -d':' -f 2 | cut -d' ' -f 1)
-if [[ $rootfs_dev == '/dev/mmcblk0p2' ]]; then
-    selection="stable,copy2"
-    current_part=2
-    update_part=3
+current_version=$(readlink -f /etc/adu-version)
+if [[ $current_version == '/etc/adu-versionA' ]]; then
+    update_part='/etc/adu-versionB'
+    revert_part='/etc/adu-versionA'
 else
-    selection="stable,copy1"
-    current_part=3
-    update_part=2
+    update_part='/etc/adu-versionA'
+    revert_part='/etc/adu-versionB'
 fi
 
 if [[ $action == "apply" ]]; then
@@ -89,7 +84,7 @@ if [[ $action == "apply" ]]; then
     # instead of the one that was updated.
     # rpipart variable is specific to our boot.scr script.
     echo "Applying update." >> "${log_dir}/swupdate.log"
-    fw_setenv rpipart $update_part
+    ln -sf $update_part /etc/adu-version
     $ret $?
 fi
 
@@ -99,7 +94,7 @@ if [[ $action == "revert" ]]; then
     # instead of the one that was updated.
     # rpipart variable is specific to our boot.scr script.
     echo "Reverting update." >> "${log_dir}/swupdate.log"
-    fw_setenv rpipart $current_part
+    ln -sf $revert_part /etc/adu-version
     $ret $?
 fi
 
@@ -115,7 +110,8 @@ if [[ $action == "install" ]]; then
         # openssl rsa -in ${WORKDIR}/priv.pem -out ${WORKDIR}/public.pem -outform PEM -pubout
 
         # Call swupdate with the image file and the public key for signature validation
-        swupdate -v -i "${image_file}" -k /adukey/public.pem -e ${selection} &>> "${log_dir}/swupdate.log"
+        #swupdate -v -i "${image_file}" -k /adukey/public.pem -e ${selection} &>> "${log_dir}/swupdate.log"
+        cp $image_file $update_part
         $ret $?
     else
         echo "Image file $image_file was not found." >> "${log_dir}/swupdate.log"

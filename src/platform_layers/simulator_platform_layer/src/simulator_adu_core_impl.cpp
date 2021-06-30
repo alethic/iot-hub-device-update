@@ -262,7 +262,7 @@ ADUC_Result SimulatorPlatformLayer::Apply(const char* workflowId, const ADUC_App
 
     // Can alternately return ADUC_ApplyResult_SuccessRebootRequired to indicate reboot required.
     // Success is returned here to force a new swVersion to be sent back to the server.
-    return ADUC_Result{ ADUC_ApplyResult_Success };
+    return ADUC_Result{ ADUC_ApplyResult_SuccessRebootRequired };
 }
 
 void SimulatorPlatformLayer::Cancel(const char* workflowId)
