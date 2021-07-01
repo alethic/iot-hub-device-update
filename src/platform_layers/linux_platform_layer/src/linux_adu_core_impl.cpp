@@ -22,9 +22,21 @@
 #include <do_download.h>
 #include <do_exceptions.h>
 
+#include <cstdio>
+#include <curl/curl.h>
+#include <curl/easy.h>
+#include <string>
+
 namespace MSDO = microsoft::deliveryoptimization;
 
 using ADUC::LinuxPlatformLayer;
+using namespace std;
+
+size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+    size_t written;
+    written = fwrite(ptr, size, nmemb, stream);
+    return written;
+}
 
 /**
  * @brief Factory method for LinuxPlatformLayer
@@ -153,67 +165,34 @@ ADUC_Result LinuxPlatformLayer::Download(const char* workflowId, const char* upd
         entity.DownloadUri,
         fullFilePath.str().c_str());
 
-    try
-    {
-        MSDO::download::download_url_to_path(
-            entity.DownloadUri, fullFilePath.str(), std::ref(_IsCancellationRequested));
-
-        resultCode = ADUC_DownloadResult_Success;
-    }
-    // Catch DO exception only to get extended result code. Other exceptions will be caught by CallResultMethodAndHandleExceptions
-    catch (const MSDO::exception& e)
-    {
-        const int32_t doErrorCode = e.error_code();
-
-        Log_Info("Caught DO exception, msg: %s, code: %d", e.what(), doErrorCode);
-
-        if (doErrorCode == static_cast<int32_t>(std::errc::operation_canceled))
+    CURL *curl;
+    FILE *fp;
+    CURLcode res;
+    curl = curl_easy_init();
+    if (curl) {
+        fp = fopen(fullFilePath.str().c_str(),"wb");
+        curl_easy_setopt(curl, CURLOPT_URL, entity.DownloadUri);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+        res = curl_easy_perform(curl);
+        curl_easy_cleanup(curl);
+        int closeRes = fclose(fp);
+        if ((closeRes != 0) || (res != CURLE_OK))
         {
-            Log_Info("Download was cancelled");
-            info->NotifyDownloadProgress(workflowId, entity.FileId, ADUC_DownloadProgressState_Cancelled, 0, 0);
-
-            resultCode = ADUC_DownloadResult_Cancelled;
-        }
-        else
-        {
-            if (doErrorCode == static_cast<int32_t>(std::errc::timed_out))
-            {
-                Log_Error("Download failed due to DO timeout");
-            }
-
+            Log_Error("download failed");
             resultCode = ADUC_DownloadResult_Failure;
-        }
-
-        extendedResultCode = MAKE_ADUC_DELIVERY_OPTIMIZATION_EXTENDEDRESULTCODE(doErrorCode);
-    }
-    catch (const std::exception& e)
-    {
-        Log_Error("DO download failed with an unhandled std exception: %s", e.what());
-
-        resultCode = ADUC_DownloadResult_Failure;
-        if (errno != 0)
-        {
-            extendedResultCode = MAKE_ADUC_ERRNO_EXTENDEDRESULTCODE(errno);
+            extendedResultCode = ADUC_ERC_NOTRECOVERABLE;
         }
         else
         {
-            extendedResultCode = ADUC_ERC_NOTRECOVERABLE;
+            resultCode = ADUC_DownloadResult_Success;
         }
     }
-    catch (...)
+    else
     {
-        Log_Error("DO download failed due to an unknown exception");
-
+        Log_Error("curl_easy_init failed");
         resultCode = ADUC_DownloadResult_Failure;
-
-        if (errno != 0)
-        {
-            extendedResultCode = MAKE_ADUC_ERRNO_EXTENDEDRESULTCODE(errno);
-        }
-        else
-        {
-            extendedResultCode = ADUC_ERC_NOTRECOVERABLE;
-        }
+        extendedResultCode = ADUC_ERC_NOTRECOVERABLE;
     }
 
     // If we downloaded successfully, validate the file hash.

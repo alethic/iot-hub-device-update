@@ -3,6 +3,7 @@ cmake_minimum_required (VERSION 3.5)
 set (target_name linux_platform_layer)
 
 include (agentRules)
+find_package (Curl REQUIRED)
 
 compileasc99 ()
 disablertti ()
