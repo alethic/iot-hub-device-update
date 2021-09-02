@@ -15,6 +15,7 @@
 #include <aduc/logging.h>
 #include <aduc/string_c_utils.h>
 
+#include <azure_c_shared_utility/threadapi.h> // ThreadAPI_Sleep
 #include <iothub_client_version.h>
 #include <parson.h>
 #include <pnp_protocol.h>
@@ -216,9 +217,19 @@ void AzureDeviceUpdateCoreInterface_DoWork(void* componentContext)
 
 void AzureDeviceUpdateCoreInterface_Destroy(void** componentContext)
 {
+    Log_Info("Uninitializing DU Core component.");
+
     ADUC_WorkflowData* workflowData = (ADUC_WorkflowData*)(*componentContext);
 
-    Log_Info("ADUC agent stopping");
+
+    // Let's wait for the current workflow to finish before shutting down the agent.
+    unsigned int maxWait = 30;
+    while (workflowData->OperationInProgress && maxWait > 0)
+    {
+        Log_Info("Wating for in-progress workflow to complete...");
+        ThreadAPI_Sleep(1000);
+        maxWait--;
+    }
 
     ADUC_WorkflowData_Free(workflowData);
     free(workflowData);

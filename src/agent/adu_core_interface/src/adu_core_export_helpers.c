@@ -58,8 +58,6 @@ ADUC_SetUpdateStateHelper(ADUC_WorkflowData* workflowData, ADUCITF_State updateS
                 // Note: if we report Idle state and InstallUpdateId doesn't match ExpectedUpdateId,
                 // ADU service will consider the update failed.
                 ADUC_MethodCall_Idle(workflowData);
-                workflowData->OperationCancelled = false;
-                workflowData->OperationInProgress = false;
                 return;
             }
 
@@ -72,8 +70,6 @@ ADUC_SetUpdateStateHelper(ADUC_WorkflowData* workflowData, ADUCITF_State updateS
                 // Note: if we report Idle state and InstallUpdateId doesn't match ExpectedUpdateId,
                 // ADU service will consider the update failed.
                 ADUC_MethodCall_Idle(workflowData);
-                workflowData->OperationCancelled = false;
-                workflowData->OperationInProgress = false;
                 return;
             }
 
@@ -82,9 +78,7 @@ ADUC_SetUpdateStateHelper(ADUC_WorkflowData* workflowData, ADUCITF_State updateS
         }
 
         AzureDeviceUpdateCoreInterface_ReportStateAndResultAsync(updateState, result);
-        ADUC_MethodCall_Idle(workflowData);
-        workflowData->OperationCancelled = false;
-        workflowData->OperationInProgress = false;
+        ADUC_MethodCall_Idle(workflowData);        
     }
     else
     {
@@ -131,8 +125,6 @@ void ADUC_SetInstalledUpdateIdAndGoToIdle(ADUC_WorkflowData* workflowData, const
 
     ADUC_MethodCall_Idle(workflowData);
 
-    workflowData->OperationCancelled = false;
-    workflowData->OperationInProgress = false;
     workflowData->SystemRebootState = ADUC_SystemRebootState_None;
     workflowData->AgentRestartState = ADUC_AgentRestartState_None;
 }
