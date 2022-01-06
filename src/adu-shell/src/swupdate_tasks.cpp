@@ -88,6 +88,33 @@ ADUShellTaskResult Apply(const ADUShell_LaunchArguments& launchArgs)
  * @param launchArgs An adu-shell launch arguments.
  * @return A result from child process.
  */
+ADUShellTaskResult Reboot(const ADUShell_LaunchArguments& launchArgs)
+{
+    ADUShellTaskResult taskResult;
+
+    // Constructing parameter for child process.
+    // This is equivalent to : command << c_installScript << " -l " << _logFolder << " -x"
+
+    std::vector<std::string> args;
+
+    if (launchArgs.logFile != nullptr)
+    {
+        args.emplace_back("-l");
+        args.emplace_back(launchArgs.logFile);
+    }
+
+    args.emplace_back("-x");
+
+    taskResult.SetExitStatus(ADUC_LaunchChildProcess(SWUpdateCommand, args, taskResult.Output()));
+    return taskResult;
+}
+
+/**
+ * @brief Runs appropriate command based on an action and other arguments in launchArgs.
+ *
+ * @param launchArgs An adu-shell launch arguments.
+ * @return A result from child process.
+ */
 ADUShellTaskResult Rollback(const ADUShell_LaunchArguments& launchArgs)
 {
     return Cancel(launchArgs);
@@ -137,7 +164,7 @@ ADUShellTaskResult DoSWUpdateTask(const ADUShell_LaunchArguments& launchArgs)
             { ADUShellAction::Apply, Apply },
             { ADUShellAction::Cancel, Cancel },
             { ADUShellAction::Rollback, Rollback },
-            { ADUShellAction::Reboot, CommonTasks::Reboot }
+            { ADUShellAction::Reboot, Reboot }
         };
 
         taskProc = actionMap.at(launchArgs.action);

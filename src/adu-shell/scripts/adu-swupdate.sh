@@ -17,6 +17,7 @@ print_help() {
     echo "-i image_file     The update image file to install. For swupdate this is typically a .swu file"
     echo "-l log_dir        The folder where logs should be written."
     echo "-r                Reverts the apply by telling the bootloader to boot into the current partition."
+    echo "-x                Reboots the machine."
 }
 
 action=""
@@ -45,6 +46,9 @@ while getopts "ahi:l:r" opt; do
         action="revert"
         num_actions=$((num_actions + 1))
         ;;
+    x)
+        action="reboot"
+        num_actions=$((num_actions + 1))
     \?)
         print_help
         $ret 1
@@ -100,6 +104,16 @@ if [[ $action == "revert" ]]; then
     # rpipart variable is specific to our boot.scr script.
     echo "Reverting update." >> "${log_dir}/swupdate.log"
     fw_setenv rpipart $current_part
+    $ret $?
+fi
+
+if [[ $action == "reboot" ]]; then
+    # Set the bootloader environment variable
+    # to tell the bootloader to boot into the current partition
+    # instead of the one that was updated.
+    # rpipart variable is specific to our boot.scr script.
+    echo "Rebooting system." >> "${log_dir}/swupdate.log"
+    /sbin/reboot --reboot --no-wall
     $ret $?
 fi
 
